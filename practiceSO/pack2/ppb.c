@@ -1,0 +1,69 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <stdlib.h>
+
+char str[20];
+
+typedef struct
+{
+	int fd;
+	char ficheiro[20];
+	char *v;
+} vetor;
+
+int match_line(int fd, char *str);
+
+void* search(void *arg)
+{
+	vetor *vet=(vetor*)arg;
+	int n;
+	
+	while(1)
+	{
+		n=match_line(vet->fd, str);
+		if(n==0)
+			return NULL;
+		printf("%s: %d\n", vet->ficheiro, n);
+	}
+}
+
+int main(int argc, char *argv[])
+{	
+	if(argc<3)
+	{	
+		printf("ERRO1\n");
+		exit(1);
+	}
+	
+	pthread_t t[argc-2];
+	vetor v[argc-2];
+	int i;
+	
+	strcpy(str, argv[1]);
+	
+	for(i=0; i<argc-2; i++)
+	{
+		v[i].fd=open(argv[i+2], O_RDONLY);
+		if(v[i].fd<0)
+		{	
+			printf("ERRO2\n");
+			exit(1);
+		}
+		strcpy(v[i].ficheiro, argv[i+2]);
+		
+		pthread_create(&t[i], NULL, search, &v[i]);
+	}
+	
+	for(i=0; i<argc-2; i++)
+	{
+		pthread_join(t[i], NULL);
+		close(v[i].fd);
+	}	
+	return 0;
+}
